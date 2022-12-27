@@ -1,9 +1,9 @@
 package org.example.servlet;
 
+import org.example.config.JavaConfig;
 import org.example.controller.PostController;
 import org.example.exception.NotFoundException;
-import org.example.repository.PostRepository;
-import org.example.service.PostService;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -17,14 +17,13 @@ public class MainServlet extends HttpServlet {
 
     @Override
     public void init() {
-        final var repository = new PostRepository();
-        final var service = new PostService(repository);
-        postController = new PostController(service);
+        final var context = new AnnotationConfigApplicationContext(JavaConfig.class);
+        final var controller = context.getBean("postController");
+        this.postController = (PostController) controller;
     }
 
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) {
-        // если деплоились в root context, то достаточно этого
         try {
             final var path = req.getRequestURI();
             final var method = req.getMethod();
@@ -33,7 +32,6 @@ public class MainServlet extends HttpServlet {
                 return;
             }
             if (method.equals("GET") && path.matches(PATH_WITH_NUMBER_POST)) {
-                // easy way
                 final var id = Long.parseLong(path.substring(path.lastIndexOf("/") + 1));
                 postController.getById(id, resp);
                 return;
@@ -52,8 +50,7 @@ public class MainServlet extends HttpServlet {
         } catch (IOException ex) {
             ex.printStackTrace();
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-        catch (NotFoundException ex) {
+        } catch (NotFoundException ex) {
             ex.printStackTrace();
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
